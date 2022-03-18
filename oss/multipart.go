@@ -2,12 +2,10 @@ package oss
 
 import (
 	"bytes"
-	"encoding/xml"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
-	"sort"
 	"strconv"
 )
 
@@ -23,10 +21,13 @@ import (
 //
 func (bucket Bucket) InitiateMultipartUpload(objectKey string, options ...Option) (InitiateMultipartUploadResult, error) {
 	var imur InitiateMultipartUploadResult
-	opts := AddContentType(options, objectKey)
-	params, _ := GetRawParams(options)
-	paramKeys := []string{"sequential", "withHashContext", "x-oss-enable-md5", "x-oss-enable-sha1", "x-oss-enable-sha256"}
-	ConvertEmptyValueToNil(params, paramKeys)
+	opts := addContentType(options, objectKey)
+	params, _ := getRawParams(options)
+	_, ok := params["sequential"]
+	if ok {
+		// convert "" to nil
+		params["sequential"] = nil
+	}
 	params["uploads"] = nil
 
 	resp, err := bucket.do("POST", objectKey, params, opts, nil, nil)
@@ -109,7 +110,7 @@ func (bucket Bucket) UploadPartFromFile(imur InitiateMultipartUploadResult, file
 // error    it's nil if the operation succeeds, otherwise it's an error object.
 //
 func (bucket Bucket) DoUploadPart(request *UploadPartRequest, options []Option) (*UploadPartResult, error) {
-	listener := GetProgressListener(options)
+	listener := getProgressListener(options)
 	options = append(options, ContentLength(request.PartSize))
 	params := map[string]interface{}{}
 	params["partNumber"] = strconv.Itoa(request.PartNumber)
@@ -126,8 +127,8 @@ func (bucket Bucket) DoUploadPart(request *UploadPartRequest, options []Option) 
 		PartNumber: request.PartNumber,
 	}
 
-	if bucket.GetConfig().IsEnableCRC {
-		err = CheckCRC(resp, "DoUploadPart")
+	if bucket.getConfig().IsEnableCRC {
+		err = checkCRC(resp, "DoUploadPart")
 		if err != nil {
 			return &UploadPartResult{part}, err
 		}
@@ -158,14 +159,14 @@ func (bucket Bucket) UploadPartCopy(imur InitiateMultipartUploadResult, srcBucke
 
 	//first find version id
 	versionIdKey := "versionId"
-	versionId, _ := FindOption(options, versionIdKey, nil)
+	versionId, _ := findOption(options, versionIdKey, nil)
 	if versionId == nil {
 		opts = []Option{CopySource(srcBucketName, url.QueryEscape(srcObjectKey)),
 			CopySourceRange(startPosition, partSize)}
 	} else {
 		opts = []Option{CopySourceVersion(srcBucketName, url.QueryEscape(srcObjectKey), versionId.(string)),
 			CopySourceRange(startPosition, partSize)}
-		options = DeleteOption(options, versionIdKey)
+		options = deleteOption(options, versionIdKey)
 	}
 
 	opts = append(opts, options...)
@@ -198,19 +199,9 @@ func (bucket Bucket) UploadPartCopy(imur InitiateMultipartUploadResult, srcBucke
 // error    it's nil if the operation succeeds, otherwise it's an error object.
 //
 func (bucket Bucket) CompleteMultipartUpload(imur InitiateMultipartUploadResult,
-	parts []UploadPart, options ...Option) (CompleteMultipartUploadResult, error) {
+	 options ...Option) (CompleteMultipartUploadResult, error) {
 	var out CompleteMultipartUploadResult
-
-	sort.Sort(UploadParts(parts))
-	cxml := completeMultipartUploadXML{}
-	cxml.Part = parts
-	bs, err := xml.Marshal(cxml)
-	if err != nil {
-		return out, err
-	}
 	buffer := new(bytes.Buffer)
-	buffer.Write(bs)
-
 	params := map[string]interface{}{}
 	params["uploadId"] = imur.UploadID
 	resp, err := bucket.do("POST", imur.Key, params, options, buffer, nil)
@@ -237,7 +228,7 @@ func (bucket Bucket) AbortMultipartUpload(imur InitiateMultipartUploadResult, op
 		return err
 	}
 	defer resp.Body.Close()
-	return CheckRespCode(resp.StatusCode, []int{http.StatusNoContent})
+	return checkRespCode(resp.StatusCode, []int{http.StatusNoContent})
 }
 
 // ListUploadedParts lists the uploaded parts.
@@ -252,7 +243,7 @@ func (bucket Bucket) ListUploadedParts(imur InitiateMultipartUploadResult, optio
 	options = append(options, EncodingType("url"))
 
 	params := map[string]interface{}{}
-	params, err := GetRawParams(options)
+	params, err := getRawParams(options)
 	if err != nil {
 		return out, err
 	}
@@ -284,7 +275,7 @@ func (bucket Bucket) ListMultipartUploads(options ...Option) (ListMultipartUploa
 	var out ListMultipartUploadResult
 
 	options = append(options, EncodingType("url"))
-	params, err := GetRawParams(options)
+	params, err := getRawParams(options)
 	if err != nil {
 		return out, err
 	}

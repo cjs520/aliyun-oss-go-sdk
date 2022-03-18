@@ -91,7 +91,7 @@ func (s *OssBucketLiveChannelSuite) TestCreateLiveChannel(c *C) {
 	err = s.bucket.DeleteLiveChannel(channelName)
 	c.Assert(err, IsNil)
 
-	invalidType := RandStr(4)
+	invalidType := randStr(4)
 	invalidTarget := LiveChannelTarget{
 		PlaylistName: playlistName,
 		Type:         invalidType,
@@ -129,7 +129,7 @@ func (s *OssBucketLiveChannelSuite) TestDeleteLiveChannel(c *C) {
 	err = s.bucket.DeleteLiveChannel(emptyChannelName)
 	c.Assert(err, NotNil)
 
-	longChannelName := RandStr(65)
+	longChannelName := randStr(65)
 	err = s.bucket.DeleteLiveChannel(longChannelName)
 	c.Assert(err, NotNil)
 
@@ -197,7 +197,7 @@ func (s *OssBucketLiveChannelSuite) TestPutLiveChannelStatus(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert("disabled", Equals, getCfg.Status)
 
-	invalidStatus := RandLowStr(9)
+	invalidStatus := randLowStr(9)
 	err = s.bucket.PutLiveChannelStatus(channelName, invalidStatus)
 	c.Assert(err, NotNil)
 
@@ -327,7 +327,7 @@ func (s *OssBucketLiveChannelSuite) TestListLiveChannel(c *C) {
 	ok = compareListResult(result, "", "", nextMarker, 100, true, 100)
 	c.Assert(ok, Equals, true)
 
-	randPrefix := RandStr(5)
+	randPrefix := randStr(5)
 	result, err = s.bucket.ListLiveChannel(Prefix(randPrefix))
 	c.Assert(err, IsNil)
 	ok = compareListResult(result, randPrefix, "", "", 100, false, 0)

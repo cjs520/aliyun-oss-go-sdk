@@ -32,7 +32,7 @@ func (bucket Bucket) CopyFile(srcBucketName, srcObjectKey, destObjectKey string,
 	routines := getRoutines(options)
 
 	var strVersionId string
-	versionId, _ := FindOption(options, "versionId", nil)
+	versionId, _ := findOption(options, "versionId", nil)
 	if versionId != nil {
 		strVersionId = versionId.(string)
 	}
@@ -146,15 +146,11 @@ func (bucket Bucket) copyFile(srcBucketName, srcObjectKey, destBucketName, destO
 	partSize int64, options []Option, routines int) error {
 	descBucket, err := bucket.Client.Bucket(destBucketName)
 	srcBucket, err := bucket.Client.Bucket(srcBucketName)
-	listener := GetProgressListener(options)
+	listener := getProgressListener(options)
 
-	// choice valid options
-	headerOptions := ChoiceHeadObjectOption(options)
-	partOptions := ChoiceTransferPartOption(options)
-	completeOptions := ChoiceCompletePartOption(options)
-	abortOptions := ChoiceAbortPartOption(options)
-
-	meta, err := srcBucket.GetObjectDetailedMeta(srcObjectKey, headerOptions...)
+	// for get whole length
+	skipOptions := deleteOption(options, HTTPHeaderRange)
+	meta, err := srcBucket.GetObjectDetailedMeta(srcObjectKey, skipOptions...)
 	if err != nil {
 		return err
 	}
@@ -182,8 +178,11 @@ func (bucket Bucket) copyFile(srcBucketName, srcObjectKey, destBucketName, destO
 	event := newProgressEvent(TransferStartedEvent, 0, totalBytes, 0)
 	publishProgress(listener, event)
 
+	// oss server don't support x-oss-storage-class
+	options = deleteOption(options, HTTPHeaderOssStorageClass)
+
 	// Start to copy workers
-	arg := copyWorkerArg{descBucket, imur, srcBucketName, srcObjectKey, partOptions, copyPartHooker}
+	arg := copyWorkerArg{descBucket, imur, srcBucketName, srcObjectKey, options, copyPartHooker}
 	for w := 1; w <= routines; w++ {
 		go copyWorker(w, arg, jobs, results, failed, die)
 	}
@@ -205,7 +204,7 @@ func (bucket Bucket) copyFile(srcBucketName, srcObjectKey, destBucketName, destO
 			publishProgress(listener, event)
 		case err := <-failed:
 			close(die)
-			descBucket.AbortMultipartUpload(imur, abortOptions...)
+			descBucket.AbortMultipartUpload(imur, options...)
 			event = newProgressEvent(TransferFailedEvent, completedBytes, totalBytes, 0)
 			publishProgress(listener, event)
 			return err
@@ -220,9 +219,9 @@ func (bucket Bucket) copyFile(srcBucketName, srcObjectKey, destBucketName, destO
 	publishProgress(listener, event)
 
 	// Complete the multipart upload
-	_, err = descBucket.CompleteMultipartUpload(imur, ups, completeOptions...)
+	_, err = descBucket.CompleteMultipartUpload(imur,  options...)
 	if err != nil {
-		bucket.AbortMultipartUpload(imur, abortOptions...)
+		bucket.AbortMultipartUpload(imur, options...)
 		return err
 	}
 	return nil
@@ -259,7 +258,7 @@ func (cp copyCheckpoint) isValid(meta http.Header) (bool, error) {
 		return false, nil
 	}
 
-	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 64)
+	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 0)
 	if err != nil {
 		return false, err
 	}
@@ -347,7 +346,7 @@ func (cp *copyCheckpoint) prepare(meta http.Header, srcBucket *Bucket, srcObject
 	cp.DestBucketName = destBucket.BucketName
 	cp.DestObjectKey = destObjectKey
 
-	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 64)
+	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 0)
 	if err != nil {
 		return err
 	}
@@ -377,7 +376,7 @@ func (cp *copyCheckpoint) prepare(meta http.Header, srcBucket *Bucket, srcObject
 func (cp *copyCheckpoint) complete(bucket *Bucket, parts []UploadPart, cpFilePath string, options []Option) error {
 	imur := InitiateMultipartUploadResult{Bucket: cp.DestBucketName,
 		Key: cp.DestObjectKey, UploadID: cp.CopyID}
-	_, err := bucket.CompleteMultipartUpload(imur, parts, options...)
+	_, err := bucket.CompleteMultipartUpload(imur, options...)
 	if err != nil {
 		return err
 	}
@@ -390,7 +389,7 @@ func (bucket Bucket) copyFileWithCp(srcBucketName, srcObjectKey, destBucketName,
 	partSize int64, options []Option, cpFilePath string, routines int) error {
 	descBucket, err := bucket.Client.Bucket(destBucketName)
 	srcBucket, err := bucket.Client.Bucket(srcBucketName)
-	listener := GetProgressListener(options)
+	listener := getProgressListener(options)
 
 	// Load CP data
 	ccp := copyCheckpoint{}
@@ -399,12 +398,10 @@ func (bucket Bucket) copyFileWithCp(srcBucketName, srcObjectKey, destBucketName,
 		os.Remove(cpFilePath)
 	}
 
-	// choice valid options
-	headerOptions := ChoiceHeadObjectOption(options)
-	partOptions := ChoiceTransferPartOption(options)
-	completeOptions := ChoiceCompletePartOption(options)
-
-	meta, err := srcBucket.GetObjectDetailedMeta(srcObjectKey, headerOptions...)
+	// Make sure the object is not updated.
+	// get whole length
+	skipOptions := deleteOption(options, HTTPHeaderRange)
+	meta, err := srcBucket.GetObjectDetailedMeta(srcObjectKey, skipOptions...)
 	if err != nil {
 		return err
 	}
@@ -434,8 +431,11 @@ func (bucket Bucket) copyFileWithCp(srcBucketName, srcObjectKey, destBucketName,
 	event := newProgressEvent(TransferStartedEvent, completedBytes, ccp.ObjStat.Size, 0)
 	publishProgress(listener, event)
 
+	// oss server don't support x-oss-storage-class
+	options = deleteOption(options, HTTPHeaderOssStorageClass)
+
 	// Start the worker coroutines
-	arg := copyWorkerArg{descBucket, imur, srcBucketName, srcObjectKey, partOptions, copyPartHooker}
+	arg := copyWorkerArg{descBucket, imur, srcBucketName, srcObjectKey, options, copyPartHooker}
 	for w := 1; w <= routines; w++ {
 		go copyWorker(w, arg, jobs, results, failed, die)
 	}
@@ -470,5 +470,5 @@ func (bucket Bucket) copyFileWithCp(srcBucketName, srcObjectKey, destBucketName,
 	event = newProgressEvent(TransferCompletedEvent, completedBytes, ccp.ObjStat.Size, 0)
 	publishProgress(listener, event)
 
-	return ccp.complete(descBucket, ccp.CopyParts, cpFilePath, completeOptions)
+	return ccp.complete(descBucket, ccp.CopyParts, cpFilePath, options)
 }

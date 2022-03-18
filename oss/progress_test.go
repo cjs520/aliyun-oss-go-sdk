@@ -128,7 +128,7 @@ func (listener *OssProgressListener) ProgressChanged(event *ProgressEvent) {
 
 // TestPutObject
 func (s *OssProgressSuite) TestPutObject(c *C) {
-	objectName := RandStr(8) + ".jpg"
+	objectName := randStr(8) + ".jpg"
 	localFile := "../sample/The Go Programming Language.html"
 
 	fileInfo, err := os.Stat(localFile)
@@ -176,31 +176,19 @@ func (s *OssProgressSuite) TestPutObject(c *C) {
 }
 
 // TestSignURL
-func (s *OssProgressSuite) SignURLTestFunc(c *C, authVersion AuthVersionType, extraHeaders []string) {
-	objectName := objectNamePrefix + RandStr(8)
-	filePath := RandLowStr(10)
-	content := RandStr(20)
-	CreateFile(filePath, content, c)
-
-	oldType := s.bucket.Client.Config.AuthVersion
-	oldHeaders := s.bucket.Client.Config.AdditionalHeaders
-	s.bucket.Client.Config.AuthVersion = authVersion
-	s.bucket.Client.Config.AdditionalHeaders = extraHeaders
+func (s *OssProgressSuite) TestSignURL(c *C) {
+	objectName := objectNamePrefix + randStr(8)
+	filePath := randLowStr(10)
+	content := randStr(20)
+	createFile(filePath, content, c)
 
 	// Sign URL for put
 	progressListener := OssProgressListener{}
 	str, err := s.bucket.SignURL(objectName, HTTPPut, 60, Progress(&progressListener))
 	c.Assert(err, IsNil)
-	if s.bucket.Client.Config.AuthVersion == AuthV1 {
-		c.Assert(strings.Contains(str, HTTPParamExpires+"="), Equals, true)
-		c.Assert(strings.Contains(str, HTTPParamAccessKeyID+"="), Equals, true)
-		c.Assert(strings.Contains(str, HTTPParamSignature+"="), Equals, true)
-	} else {
-		c.Assert(strings.Contains(str, HTTPParamSignatureVersion+"=OSS2"), Equals, true)
-		c.Assert(strings.Contains(str, HTTPParamExpiresV2+"="), Equals, true)
-		c.Assert(strings.Contains(str, HTTPParamAccessKeyIDV2+"="), Equals, true)
-		c.Assert(strings.Contains(str, HTTPParamSignatureV2+"="), Equals, true)
-	}
+	c.Assert(strings.Contains(str, HTTPParamExpires+"="), Equals, true)
+	c.Assert(strings.Contains(str, HTTPParamAccessKeyID+"="), Equals, true)
+	c.Assert(strings.Contains(str, HTTPParamSignature+"="), Equals, true)
 
 	// Put object with URL
 	fd, err := os.Open(filePath)
@@ -231,16 +219,9 @@ func (s *OssProgressSuite) SignURLTestFunc(c *C, authVersion AuthVersionType, ex
 	// Sign URL for get
 	str, err = s.bucket.SignURL(objectName, HTTPGet, 60, Progress(&progressListener))
 	c.Assert(err, IsNil)
-	if s.bucket.Client.Config.AuthVersion == AuthV1 {
-		c.Assert(strings.Contains(str, HTTPParamExpires+"="), Equals, true)
-		c.Assert(strings.Contains(str, HTTPParamAccessKeyID+"="), Equals, true)
-		c.Assert(strings.Contains(str, HTTPParamSignature+"="), Equals, true)
-	} else {
-		c.Assert(strings.Contains(str, HTTPParamSignatureVersion+"=OSS2"), Equals, true)
-		c.Assert(strings.Contains(str, HTTPParamExpiresV2+"="), Equals, true)
-		c.Assert(strings.Contains(str, HTTPParamAccessKeyIDV2+"="), Equals, true)
-		c.Assert(strings.Contains(str, HTTPParamSignatureV2+"="), Equals, true)
-	}
+	c.Assert(strings.Contains(str, HTTPParamExpires+"="), Equals, true)
+	c.Assert(strings.Contains(str, HTTPParamAccessKeyID+"="), Equals, true)
+	c.Assert(strings.Contains(str, HTTPParamSignature+"="), Equals, true)
 
 	// Get object with URL
 	progressListener.TotalRwBytes = 0
@@ -256,7 +237,7 @@ func (s *OssProgressSuite) SignURLTestFunc(c *C, authVersion AuthVersionType, ex
 	str, err = s.bucket.SignURL(objectName, HTTPGet, 10, Progress(&progressListener))
 	c.Assert(err, IsNil)
 
-	newFile := RandStr(10)
+	newFile := randStr(10)
 	progressListener.TotalRwBytes = 0
 	err = s.bucket.GetObjectToFileWithURL(str, newFile, Progress(&progressListener))
 	c.Assert(progressListener.TotalRwBytes, Equals, int64(len(content)))
@@ -272,19 +253,10 @@ func (s *OssProgressSuite) SignURLTestFunc(c *C, authVersion AuthVersionType, ex
 	c.Assert(err, IsNil)
 
 	testLogger.Println("OssProgressSuite.TestSignURL")
-
-	s.bucket.Client.Config.AuthVersion = oldType
-	s.bucket.Client.Config.AdditionalHeaders = oldHeaders
-}
-
-func (s *OssProgressSuite) TestSignURL(c *C) {
-	s.SignURLTestFunc(c, AuthV1, []string{})
-	s.SignURLTestFunc(c, AuthV2, []string{})
-	s.SignURLTestFunc(c, AuthV2, []string{"host", "range", "user-agent"})
 }
 
 func (s *OssProgressSuite) TestPutObjectNegative(c *C) {
-	objectName := objectNamePrefix + RandStr(8)
+	objectName := objectNamePrefix + randStr(8)
 	localFile := "../sample/The Go Programming Language.html"
 
 	// Invalid endpoint
@@ -303,8 +275,8 @@ func (s *OssProgressSuite) TestPutObjectNegative(c *C) {
 
 // TestAppendObject
 func (s *OssProgressSuite) TestAppendObject(c *C) {
-	objectName := objectNamePrefix + RandStr(8)
-	objectValue := RandStr(100)
+	objectName := objectNamePrefix + randStr(8)
+	objectValue := randStr(100)
 	var val = []byte(objectValue)
 	var nextPos int64
 	var midPos = 1 + rand.Intn(len(val)-1)
@@ -330,7 +302,7 @@ func (s *OssProgressSuite) TestAppendObject(c *C) {
 
 // TestMultipartUpload
 func (s *OssProgressSuite) TestMultipartUpload(c *C) {
-	objectName := objectNamePrefix + RandStr(8)
+	objectName := objectNamePrefix + randStr(8)
 	var fileName = "../sample/BingWallpaper-2015-11-07.jpg"
 
 	fileInfo, err := os.Stat(fileName)
@@ -371,7 +343,7 @@ func (s *OssProgressSuite) TestMultipartUpload(c *C) {
 
 // TestMultipartUploadFromFile
 func (s *OssProgressSuite) TestMultipartUploadFromFile(c *C) {
-	objectName := objectNamePrefix + RandStr(8)
+	objectName := objectNamePrefix + randStr(8)
 	var fileName = "../sample/BingWallpaper-2015-11-07.jpg"
 	fileInfo, err := os.Stat(fileName)
 	c.Assert(err, IsNil)
@@ -405,7 +377,7 @@ func (s *OssProgressSuite) TestMultipartUploadFromFile(c *C) {
 
 // TestGetObject
 func (s *OssProgressSuite) TestGetObject(c *C) {
-	objectName := objectNamePrefix + RandStr(8)
+	objectName := objectNamePrefix + randStr(8)
 	localFile := "../sample/BingWallpaper-2015-11-07.jpg"
 	newFile := "newpic-progress-1.jpg"
 
@@ -473,7 +445,7 @@ func (s *OssProgressSuite) TestGetObject(c *C) {
 
 // TestGetObjectNegative
 func (s *OssProgressSuite) TestGetObjectNegative(c *C) {
-	objectName := objectNamePrefix + RandStr(8)
+	objectName := objectNamePrefix + randStr(8)
 	localFile := "../sample/BingWallpaper-2015-11-07.jpg"
 
 	// PutObject
@@ -503,7 +475,7 @@ func (s *OssProgressSuite) TestGetObjectNegative(c *C) {
 
 // TestUploadFile
 func (s *OssProgressSuite) TestUploadFile(c *C) {
-	objectName := objectNamePrefix + RandStr(8)
+	objectName := objectNamePrefix + randStr(8)
 	fileName := "../sample/BingWallpaper-2015-11-07.jpg"
 
 	fileInfo, err := os.Stat(fileName)
@@ -524,7 +496,7 @@ func (s *OssProgressSuite) TestUploadFile(c *C) {
 
 // TestDownloadFile
 func (s *OssProgressSuite) TestDownloadFile(c *C) {
-	objectName := objectNamePrefix + RandStr(8)
+	objectName := objectNamePrefix + randStr(8)
 	fileName := "../sample/BingWallpaper-2015-11-07.jpg"
 	newFile := "down-new-file-progress-2.jpg"
 
@@ -555,7 +527,7 @@ func (s *OssProgressSuite) TestDownloadFile(c *C) {
 
 // TestCopyFile
 func (s *OssProgressSuite) TestCopyFile(c *C) {
-	srcObjectName := objectNamePrefix + RandStr(8)
+	srcObjectName := objectNamePrefix + randStr(8)
 	destObjectName := srcObjectName + "-copy"
 	fileName := "../sample/BingWallpaper-2015-11-07.jpg"
 

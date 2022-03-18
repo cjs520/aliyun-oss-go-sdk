@@ -1,11 +1,6 @@
 package oss
 
-import (
-	"io/ioutil"
-	"strings"
-
-	. "gopkg.in/check.v1"
-)
+import . "gopkg.in/check.v1"
 
 type OssUtilsSuite struct{}
 
@@ -86,14 +81,14 @@ func (s *OssUtilsSuite) TestUtilsSplitFile(c *C) {
 }
 
 func (s *OssUtilsSuite) TestUtilsFileExt(c *C) {
-	c.Assert(strings.Contains(TypeByExtension("test.txt"), "text/plain"), Equals, true)
+	c.Assert(TypeByExtension("test.txt"), Equals, "text/plain; charset=utf-8")
 	c.Assert(TypeByExtension("test.jpg"), Equals, "image/jpeg")
 	c.Assert(TypeByExtension("test.pdf"), Equals, "application/pdf")
 	c.Assert(TypeByExtension("test"), Equals, "")
-	c.Assert(strings.Contains(TypeByExtension("/root/dir/test.txt"), "text/plain"), Equals, true)
-	c.Assert(strings.Contains(TypeByExtension("root/dir/test.txt"), "text/plain"), Equals, true)
-	c.Assert(strings.Contains(TypeByExtension("root\\dir\\test.txt"), "text/plain"), Equals, true)
-	c.Assert(strings.Contains(TypeByExtension("D:\\work\\dir\\test.txt"), "text/plain"), Equals, true)
+	c.Assert(TypeByExtension("/root/dir/test.txt"), Equals, "text/plain; charset=utf-8")
+	c.Assert(TypeByExtension("root/dir/test.txt"), Equals, "text/plain; charset=utf-8")
+	c.Assert(TypeByExtension("root\\dir\\test.txt"), Equals, "text/plain; charset=utf-8")
+	c.Assert(TypeByExtension("D:\\work\\dir\\test.txt"), Equals, "text/plain; charset=utf-8")
 }
 
 func (s *OssUtilsSuite) TestGetPartEnd(c *C) {
@@ -109,117 +104,117 @@ func (s *OssUtilsSuite) TestGetPartEnd(c *C) {
 
 func (s *OssUtilsSuite) TestParseRange(c *C) {
 	// InvalidRange bytes==M-N
-	_, err := ParseRange("bytes==M-N")
+	_, err := parseRange("bytes==M-N")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "InvalidRange bytes==M-N")
 
 	// InvalidRange ranges=M-N
-	_, err = ParseRange("ranges=M-N")
+	_, err = parseRange("ranges=M-N")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "InvalidRange ranges=M-N")
 
 	// InvalidRange ranges=M-N
-	_, err = ParseRange("bytes=M-N")
+	_, err = parseRange("bytes=M-N")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "InvalidRange bytes=M-N")
 
 	// InvalidRange ranges=M-
-	_, err = ParseRange("bytes=M-")
+	_, err = parseRange("bytes=M-")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "InvalidRange bytes=M-")
 
 	// InvalidRange ranges=-N
-	_, err = ParseRange("bytes=-N")
+	_, err = parseRange("bytes=-N")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "InvalidRange bytes=-N")
 
 	// InvalidRange ranges=-0
-	_, err = ParseRange("bytes=-0")
+	_, err = parseRange("bytes=-0")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "InvalidRange bytes=-0")
 
 	// InvalidRange bytes=1-2-3
-	_, err = ParseRange("bytes=1-2-3")
+	_, err = parseRange("bytes=1-2-3")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "InvalidRange bytes=1-2-3")
 
 	// InvalidRange bytes=1-N
-	_, err = ParseRange("bytes=1-N")
+	_, err = parseRange("bytes=1-N")
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "InvalidRange bytes=1-N")
 
 	// Ranges=M-N
-	ur, err := ParseRange("bytes=1024-4096")
+	ur, err := parseRange("bytes=1024-4096")
 	c.Assert(err, IsNil)
-	c.Assert(ur.Start, Equals, (int64)(1024))
-	c.Assert(ur.End, Equals, (int64)(4096))
-	c.Assert(ur.HasStart, Equals, true)
-	c.Assert(ur.HasEnd, Equals, true)
+	c.Assert(ur.start, Equals, (int64)(1024))
+	c.Assert(ur.end, Equals, (int64)(4096))
+	c.Assert(ur.hasStart, Equals, true)
+	c.Assert(ur.hasEnd, Equals, true)
 
 	// Ranges=M-N,X-Y
-	ur, err = ParseRange("bytes=1024-4096,2048-4096")
+	ur, err = parseRange("bytes=1024-4096,2048-4096")
 	c.Assert(err, IsNil)
-	c.Assert(ur.Start, Equals, (int64)(1024))
-	c.Assert(ur.End, Equals, (int64)(4096))
-	c.Assert(ur.HasStart, Equals, true)
-	c.Assert(ur.HasEnd, Equals, true)
+	c.Assert(ur.start, Equals, (int64)(1024))
+	c.Assert(ur.end, Equals, (int64)(4096))
+	c.Assert(ur.hasStart, Equals, true)
+	c.Assert(ur.hasEnd, Equals, true)
 
 	// Ranges=M-
-	ur, err = ParseRange("bytes=1024-")
+	ur, err = parseRange("bytes=1024-")
 	c.Assert(err, IsNil)
-	c.Assert(ur.Start, Equals, (int64)(1024))
-	c.Assert(ur.End, Equals, (int64)(0))
-	c.Assert(ur.HasStart, Equals, true)
-	c.Assert(ur.HasEnd, Equals, false)
+	c.Assert(ur.start, Equals, (int64)(1024))
+	c.Assert(ur.end, Equals, (int64)(0))
+	c.Assert(ur.hasStart, Equals, true)
+	c.Assert(ur.hasEnd, Equals, false)
 
 	// Ranges=-N
-	ur, err = ParseRange("bytes=-4096")
+	ur, err = parseRange("bytes=-4096")
 	c.Assert(err, IsNil)
-	c.Assert(ur.Start, Equals, (int64)(0))
-	c.Assert(ur.End, Equals, (int64)(4096))
-	c.Assert(ur.HasStart, Equals, false)
-	c.Assert(ur.HasEnd, Equals, true)
+	c.Assert(ur.start, Equals, (int64)(0))
+	c.Assert(ur.end, Equals, (int64)(4096))
+	c.Assert(ur.hasStart, Equals, false)
+	c.Assert(ur.hasEnd, Equals, true)
 }
 
 func (s *OssUtilsSuite) TestAdjustRange(c *C) {
 	// Nil
-	start, end := AdjustRange(nil, 8192)
+	start, end := adjustRange(nil, 8192)
 	c.Assert(start, Equals, (int64)(0))
 	c.Assert(end, Equals, (int64)(8192))
 
 	// 1024-4096
-	ur := &UnpackedRange{true, true, 1024, 4095}
-	start, end = AdjustRange(ur, 8192)
+	ur := &unpackedRange{true, true, 1024, 4095}
+	start, end = adjustRange(ur, 8192)
 	c.Assert(start, Equals, (int64)(1024))
 	c.Assert(end, Equals, (int64)(4096))
 
 	// 1024-
-	ur = &UnpackedRange{true, false, 1024, 4096}
-	start, end = AdjustRange(ur, 8192)
+	ur = &unpackedRange{true, false, 1024, 4096}
+	start, end = adjustRange(ur, 8192)
 	c.Assert(start, Equals, (int64)(1024))
 	c.Assert(end, Equals, (int64)(8192))
 
 	// -4096
-	ur = &UnpackedRange{false, true, 1024, 4096}
-	start, end = AdjustRange(ur, 8192)
+	ur = &unpackedRange{false, true, 1024, 4096}
+	start, end = adjustRange(ur, 8192)
 	c.Assert(start, Equals, (int64)(4096))
 	c.Assert(end, Equals, (int64)(8192))
 
 	// Invalid range 4096-1024
-	ur = &UnpackedRange{true, true, 4096, 1024}
-	start, end = AdjustRange(ur, 8192)
+	ur = &unpackedRange{true, true, 4096, 1024}
+	start, end = adjustRange(ur, 8192)
 	c.Assert(start, Equals, (int64)(0))
 	c.Assert(end, Equals, (int64)(8192))
 
 	// Invalid range -1-
-	ur = &UnpackedRange{true, false, -1, 0}
-	start, end = AdjustRange(ur, 8192)
+	ur = &unpackedRange{true, false, -1, 0}
+	start, end = adjustRange(ur, 8192)
 	c.Assert(start, Equals, (int64)(0))
 	c.Assert(end, Equals, (int64)(8192))
 
 	// Invalid range -9999
-	ur = &UnpackedRange{false, true, 0, 9999}
-	start, end = AdjustRange(ur, 8192)
+	ur = &unpackedRange{false, true, 0, 9999}
+	start, end = adjustRange(ur, 8192)
 	c.Assert(start, Equals, (int64)(0))
 	c.Assert(end, Equals, (int64)(8192))
 }
@@ -256,58 +251,5 @@ func (s *OssUtilsSuite) TestUtilCheckBucketName(c *C) {
 	c.Assert(err, IsNil)
 
 	err = CheckBucketName("abc123-def1")
-	c.Assert(err, IsNil)
-}
-
-func (s *OssUtilsSuite) TestGetRangeString(c *C) {
-	rangeInfo := UnpackedRange{}
-	rangeInfo.HasStart = true
-	rangeInfo.HasEnd = true
-	rangeInfo.Start = 10
-	rangeInfo.End = 20
-	rangeStr := GetRangeString(rangeInfo)
-	c.Assert(rangeStr, Equals, "10-20")
-
-	rangeInfo.HasStart = true
-	rangeInfo.HasEnd = false
-	rangeInfo.Start = 10
-	rangeInfo.End = 20
-	rangeStr = GetRangeString(rangeInfo)
-	c.Assert(rangeStr, Equals, "10-")
-
-	rangeInfo.HasStart = false
-	rangeInfo.HasEnd = true
-	rangeInfo.Start = 10
-	rangeInfo.End = 20
-	rangeStr = GetRangeString(rangeInfo)
-	c.Assert(rangeStr, Equals, "-20")
-
-	rangeInfo.HasStart = false
-	rangeInfo.HasEnd = false
-	rangeInfo.Start = 10
-	rangeInfo.End = 20
-	rangeStr = GetRangeString(rangeInfo)
-	c.Assert(rangeStr, Equals, "")
-}
-
-func (s *OssUtilsSuite) TestLimitReadCloser(c *C) {
-	//test LimitReadCloser
-	str := RandStr(1024)
-	r := strings.NewReader(str)
-	lrc := LimitReadCloser(r, 1024)
-
-	rb := make([]byte, 1024)
-	n, err := lrc.Read(rb)
-	c.Assert(n, Equals, 1024)
-	c.Assert(err, IsNil)
-
-	//test DiscardReadCloser
-	r = strings.NewReader(str)
-	drc := DiscardReadCloser{
-		RC:      ioutil.NopCloser(r),
-		Discard: 100,
-	}
-	n, err = drc.Read(rb)
-	c.Assert(n, Equals, 1024-100)
 	c.Assert(err, IsNil)
 }
