@@ -665,7 +665,7 @@ func (um *urlMaker) Init(endpoint string, isCname bool, isProxy bool) error {
 		um.Scheme = "https"
 		um.NetLoc = endpoint[len("https://"):]
 	} else {
-		um.Scheme = "http"
+		um.Scheme = "https"
 		um.NetLoc = endpoint
 	}
 
