@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/xml"
 	"fmt"
+	"github.com/abslant/mime"
 	"hash"
 	"hash/crc64"
 	"io"
@@ -1184,9 +1185,9 @@ func (bucket Bucket) getConfig() *Config {
 }
 
 func addContentType(options []Option, keys ...string) []Option {
-	typ := TypeByExtension("")
+	typ := mime.TypeByExtension("")
 	for _, key := range keys {
-		typ = TypeByExtension(key)
+		typ = mime.TypeByExtension(key)
 		if typ != "" {
 			break
 		}
