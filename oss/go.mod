@@ -1,4 +1,4 @@
-module github.com/hfo4/aliyun-oss-go-sdk/oss
+module github.com/HFO4/aliyun-oss-go-sdk/oss
 
 go 1.17
 
