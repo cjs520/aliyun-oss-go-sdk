@@ -1,5 +1,5 @@
-github.com/abslant/mime v0.0.1 h1:OPW6SqxeXh4R+UnCicL3eBX+jOWwHM0fqJIkGMY0f7I=
-github.com/abslant/mime v0.0.1/go.mod h1:3/oyxZ0h2IGXqns10wR/yfWep3w+TZibxX74nWu6Nbk=
+github.com/abslant/mime v0.0.2 h1:d06MKjqTb0gmaj/w+CgkvB/0uEpWFnupEPZ/c49dkuE=
+github.com/abslant/mime v0.0.2/go.mod h1:3/oyxZ0h2IGXqns10wR/yfWep3w+TZibxX74nWu6Nbk=
 github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f h1:ZNv7On9kyUzm7fvRZumSyy/IUiSC7AzL0I1jKKtwooA=
 github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f/go.mod h1:AuiFmCCPBSrqvVMvuqFuk0qogytodnVFVSN5CeJB8Gc=
 github.com/kr/pretty v0.2.1 h1:Fmg33tUaq4/8ym9TJN1x7sLJnHVwhP33CNkpYV/7rwI=

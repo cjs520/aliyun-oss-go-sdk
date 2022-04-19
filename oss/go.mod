@@ -3,7 +3,7 @@ module github.com/HFO4/aliyun-oss-go-sdk/oss
 go 1.17
 
 require (
-	github.com/abslant/mime v0.0.1
+	github.com/abslant/mime v0.0.2
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
